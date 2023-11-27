@@ -76,11 +76,8 @@ app.layout = html.Div([
     # Download link for CSV
     html.A('Download CSV', id='download-link', href='', download='final_grouping_results.csv', target='_blank'),
 
-    # HTML component for displaying cluster descriptions
-    html.Div([
-        html.H3("Cluster Descriptions"),
-        html.P("Upload a CSV file to see cluster descriptions."),
-    ]),
+   # HTML component for displaying cluster descriptions
+    html.Div(id='cluster-descriptions'),  # Placeholder for cluster descriptions
 
     # Visualizations for Cluster Homogeneity/Heterogeneity
     dcc.Graph(
