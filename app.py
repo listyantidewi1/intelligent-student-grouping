@@ -2,7 +2,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
@@ -52,11 +52,20 @@ def generate_synthetic_data(num_students):
         'Existential': existential,
     })
 
-    return data
+    # Save the synthetic data to CSV files as templates and sample data
+    data_template_path = 'data_template.csv'
+    data_sample_path = 'data_sample.csv'
+    data.to_csv(data_template_path, index=False)
+    data.sample(frac=0.1, random_state=42).to_csv(data_sample_path, index=False)
+
+    return data, data_template_path, data_sample_path
+
+# Initialize Dash app
+app = dash.Dash(__name__)
 
 # Generate synthetic educational data
 num_students = 500
-data = generate_synthetic_data(num_students)
+data, data_template_path, data_sample_path = generate_synthetic_data(num_students)
 
 # Standardize the features
 scaler = StandardScaler()
@@ -72,9 +81,10 @@ max_clusters = 6
 cluster_performance = []
 
 for num_clusters in range(min_clusters, max_clusters + 1):
-    kmeans = KMeans(n_clusters=num_clusters, random_state=42)
+    kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42)  # or set n_init to another appropriate value
     data['Cluster'] = kmeans.fit_predict(scaled_data)
-    
+
+
     # Analyze the average performance of each cluster
     cluster_avg_performance = data.groupby('Cluster')['Exam_Scores'].mean().mean()
     cluster_performance.append(cluster_avg_performance)
@@ -101,27 +111,47 @@ for cluster_id, characteristics in cluster_characteristics.iterrows():
     description += f"  - Average Assignments Completed: {characteristics['Assignments_Completed']:.2f}\n"
     description += f"  - Average Exam Scores: {characteristics['Exam_Scores']:.2f}\n"
     description += f"  - Dominant Learning Style: {characteristics['Learning_Style']:.0f}\n"
-    
+
     # Determine the dominant intelligence
     dominant_intelligence = characteristics[['Linguistic', 'Logical_Mathematical', 'Spatial', 'Musical',
                                              'Bodily_Kinesthetic', 'Interpersonal', 'Intrapersonal', 'Naturalistic',
                                              'Existential']].idxmax()
     description += f"  - Dominant Intelligence: {dominant_intelligence}\n"
-    
-    cluster_descriptions.append(description)
 
-# Initialize Dash app
-app = dash.Dash(__name__)
+    cluster_descriptions.append(description)
 
 # Define layout of the app
 app.layout = html.Div([
     html.H1("Intelligent Student Grouping"),
-    
+
+    # Upload CSV file component
+    dcc.Upload(
+        id='upload-data',
+        children=html.Div([
+            'Drag and Drop or ',
+            html.A('Select Files')
+        ]),
+        style={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
+        multiple=False
+    ),
+
+    # Output for uploaded data
+    html.Div(id='uploaded-data'),
+
     # 3D Scatter plot for Final Grouping
     dcc.Graph(
         id='scatter-final-grouping-3d',
         figure=px.scatter_3d(data, x='Study_Hours', y='Exam_Scores', z='Learning_Style',
-                             color='Final_Cluster', size_max=10,
+                             color='Final_Cluster', size_max=20,
                              title=f'3D Scatter Plot with Learning Style and Final Grouping',
                              labels={'Study_Hours': 'Study Hours', 'Exam_Scores': 'Exam Scores',
                                      'Learning_Style': 'Learning Style'}),
@@ -131,7 +161,7 @@ app.layout = html.Div([
     dcc.Graph(
         id='scatter-multiple-intelligences',
         figure=px.scatter_3d(data, x='Linguistic', y='Logical_Mathematical', z='Spatial',
-                             color='Final_Cluster', size_max=10,
+                             color='Final_Cluster', size_max=20,
                              title='3D Scatter Plot with Multiple Intelligences',
                              labels={'Linguistic': 'Linguistic', 'Logical_Mathematical': 'Logical Mathematical',
                                      'Spatial': 'Spatial', 'Musical': 'Musical',
@@ -139,23 +169,23 @@ app.layout = html.Div([
                                      'Intrapersonal': 'Intrapersonal', 'Naturalistic': 'Naturalistic',
                                      'Existential': 'Existential'}),
     ),
-    
+
     # Bar chart for Cluster Performance
     dcc.Graph(
         id='bar-cluster-performance',
         figure={
             'data': [
-                go.Bar(x=list(range(min_clusters, max_clusters + 1)), 
-                       y=cluster_performance, 
+                go.Bar(x=list(range(min_clusters, max_clusters + 1)),
+                       y=cluster_performance,
                        marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
-                       type='bar', 
+                       type='bar',
                        name='Average Exam Scores')
             ],
-            'layout': dict(title='Average Exam Scores for Different Numbers of Clusters', 
+            'layout': dict(title='Average Exam Scores for Different Numbers of Clusters',
                            xaxis=dict(title='Number of Clusters'), yaxis=dict(title='Average Exam Scores'))
         }
     ),
-    
+
     # Table for displaying student data with pagination
     dash_table.DataTable(
         id='table',
@@ -168,20 +198,20 @@ app.layout = html.Div([
 
     # Download link for CSV
     html.A('Download CSV', id='download-link', href='', download='final_grouping_results.csv', target='_blank'),
-    
+
     # HTML component for displaying cluster descriptions
     html.Div([
         html.H3("Cluster Descriptions"),
         *[html.P(description) for description in cluster_descriptions]
     ]),
-    
+
     # Visualizations for Cluster Homogeneity/Heterogeneity
     dcc.Graph(
         id='intra-cluster-similarity',
         figure={
             'data': [
-                go.Bar(x=cluster_characteristics.index, 
-                       y=data.groupby('Final_Cluster').std()['Exam_Scores'], 
+                go.Bar(x=cluster_characteristics.index,
+                       y=data.groupby('Final_Cluster').std()['Exam_Scores'],
                        marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
                        name='Standard Deviation of Exam Scores')
             ],
@@ -189,14 +219,13 @@ app.layout = html.Div([
                            xaxis=dict(title='Final Cluster'), yaxis=dict(title='Standard Deviation of Exam Scores'))
         }
     ),
-    
-    
+
     dcc.Graph(
         id='inter-cluster-similarity',
         figure={
             'data': [
-                go.Bar(x=data.groupby('Final_Cluster').mean().index, 
-                       y=cluster_performance, 
+                go.Bar(x=data.groupby('Final_Cluster').mean().index,
+                       y=cluster_performance,
                        marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
                        name='Average Exam Scores')
             ],
@@ -205,7 +234,39 @@ app.layout = html.Div([
         }
     ),
 ])
-# Define callback for CSV download
+
+# Callback to process uploaded data
+@app.callback(
+    Output('uploaded-data', 'children'),
+    [Input('upload-data', 'contents')],
+    [State('upload-data', 'filename')]
+)
+def update_uploaded_data(contents, filename):
+    if contents is None:
+        return html.Div()
+
+    content_type, content_string = contents.split(',')
+    decoded = base64.b64decode(content_string)
+
+    # Read the uploaded CSV file into a DataFrame
+    uploaded_data = pd.read_csv(BytesIO(decoded))
+
+    # Process the uploaded data
+    # ... (perform clustering and other analyses based on the uploaded_data)
+
+    # Display information about the uploaded data
+    return html.Div([
+        html.H4(f'Uploaded Data: {filename}'),
+        dash_table.DataTable(
+            columns=[
+                {'name': col, 'id': col} for col in uploaded_data.columns
+            ],
+            data=uploaded_data.to_dict('records'),
+            page_size=10
+        )
+    ])
+
+# Callback for CSV download
 @app.callback(
     Output('download-link', 'href'),
     [Input('scatter-final-grouping-3d', 'relayoutData')]  # Use an arbitrary input, so the callback is triggered on page load
