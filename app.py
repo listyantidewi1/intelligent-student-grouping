@@ -4,7 +4,6 @@ import dash_html_components as html
 import dash_table
 from dash.dependencies import Input, Output, State
 import pandas as pd
-import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
@@ -12,113 +11,11 @@ import plotly.graph_objects as go
 from io import BytesIO
 import base64
 
-# Function to generate synthetic data
-def generate_synthetic_data(num_students):
-    np.random.seed(42)
-
-    student_ids = np.arange(1, num_students + 1)
-    study_hours = np.random.uniform(1, 10, num_students)
-    assignments_completed = np.random.randint(0, 10, num_students)
-    exam_scores = 30 + 3 * study_hours + 2 * assignments_completed + np.random.normal(0, 5, num_students)
-
-    # Simulating learning style (0: Visual, 1: Auditory, 2: Kinesthetic)
-    learning_styles = np.random.choice([0, 1, 2], num_students)
-
-    # Simulating Gardner's Multiple Intelligences
-    linguistic = np.random.uniform(1, 10, num_students)
-    logical_mathematical = np.random.uniform(1, 10, num_students)
-    spatial = np.random.uniform(1, 10, num_students)
-    musical = np.random.uniform(1, 10, num_students)
-    bodily_kinesthetic = np.random.uniform(1, 10, num_students)
-    interpersonal = np.random.uniform(1, 10, num_students)
-    intrapersonal = np.random.uniform(1, 10, num_students)
-    naturalistic = np.random.uniform(1, 10, num_students)
-    existential = np.random.uniform(1, 10, num_students)
-
-    data = pd.DataFrame({
-        'Student_ID': student_ids,
-        'Study_Hours': study_hours,
-        'Assignments_Completed': assignments_completed,
-        'Exam_Scores': exam_scores,
-        'Learning_Style': learning_styles,
-        'Linguistic': linguistic,
-        'Logical_Mathematical': logical_mathematical,
-        'Spatial': spatial,
-        'Musical': musical,
-        'Bodily_Kinesthetic': bodily_kinesthetic,
-        'Interpersonal': interpersonal,
-        'Intrapersonal': intrapersonal,
-        'Naturalistic': naturalistic,
-        'Existential': existential,
-    })
-
-    # Save the synthetic data to CSV files as templates and sample data
-    data_template_path = 'data_template.csv'
-    data_sample_path = 'data_sample.csv'
-    data.to_csv(data_template_path, index=False)
-    data.sample(frac=0.1, random_state=42).to_csv(data_sample_path, index=False)
-
-    return data, data_template_path, data_sample_path
-
 # Initialize Dash app
 app = dash.Dash(__name__)
 
-# Generate synthetic educational data
-num_students = 500
-data, data_template_path, data_sample_path = generate_synthetic_data(num_students)
-
-# Standardize the features
-scaler = StandardScaler()
-scaled_data = scaler.fit_transform(data[['Study_Hours', 'Assignments_Completed', 'Exam_Scores',
-                                         'Learning_Style', 'Linguistic', 'Logical_Mathematical',
-                                         'Spatial', 'Musical', 'Bodily_Kinesthetic',
-                                         'Interpersonal', 'Intrapersonal', 'Naturalistic', 'Existential']])
-
-# Experiment with different numbers of clusters
-min_clusters = 2
-max_clusters = 6
-
-cluster_performance = []
-
-for num_clusters in range(min_clusters, max_clusters + 1):
-    kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42)  # or set n_init to another appropriate value
-    data['Cluster'] = kmeans.fit_predict(scaled_data)
-
-
-    # Analyze the average performance of each cluster
-    cluster_avg_performance = data.groupby('Cluster')['Exam_Scores'].mean().mean()
-    cluster_performance.append(cluster_avg_performance)
-
-# Choose the optimal number of clusters based on the analysis
-optimal_num_clusters = cluster_performance.index(max(cluster_performance)) + min_clusters
-
-# Use the optimal number of clusters to create the final grouping
-kmeans_final = KMeans(n_clusters=optimal_num_clusters, random_state=42)
-data['Final_Cluster'] = kmeans_final.fit_predict(scaled_data)
-
-# Save the final results to a CSV file
-result_csv_path = 'final_grouping_results.csv'
-data.to_csv(result_csv_path, index=False)
-
-# Analyze the characteristics of each final cluster
-cluster_characteristics = data.groupby('Final_Cluster').mean()
-
-# Generate descriptive text for each cluster
-cluster_descriptions = []
-for cluster_id, characteristics in cluster_characteristics.iterrows():
-    description = f"Cluster {cluster_id} Characteristics:\n"
-    description += f"  - Average Study Hours: {characteristics['Study_Hours']:.2f}\n"
-    description += f"  - Average Assignments Completed: {characteristics['Assignments_Completed']:.2f}\n"
-    description += f"  - Average Exam Scores: {characteristics['Exam_Scores']:.2f}\n"
-    description += f"  - Dominant Learning Style: {characteristics['Learning_Style']:.0f}\n"
-
-    # Determine the dominant intelligence
-    dominant_intelligence = characteristics[['Linguistic', 'Logical_Mathematical', 'Spatial', 'Musical',
-                                             'Bodily_Kinesthetic', 'Interpersonal', 'Intrapersonal', 'Naturalistic',
-                                             'Existential']].idxmax()
-    description += f"  - Dominant Intelligence: {dominant_intelligence}\n"
-
-    cluster_descriptions.append(description)
+# Initialize with an empty DataFrame
+data = pd.DataFrame()
 
 # Define layout of the app
 app.layout = html.Div([
@@ -150,40 +47,19 @@ app.layout = html.Div([
     # 3D Scatter plot for Final Grouping
     dcc.Graph(
         id='scatter-final-grouping-3d',
-        figure=px.scatter_3d(data, x='Study_Hours', y='Exam_Scores', z='Learning_Style',
-                             color='Final_Cluster', size_max=20,
-                             title=f'3D Scatter Plot with Learning Style and Final Grouping',
-                             labels={'Study_Hours': 'Study Hours', 'Exam_Scores': 'Exam Scores',
-                                     'Learning_Style': 'Learning Style'}),
+        figure={},
     ),
 
     # 3D Scatter plot with Multiple Intelligences
     dcc.Graph(
         id='scatter-multiple-intelligences',
-        figure=px.scatter_3d(data, x='Linguistic', y='Logical_Mathematical', z='Spatial',
-                             color='Final_Cluster', size_max=20,
-                             title='3D Scatter Plot with Multiple Intelligences',
-                             labels={'Linguistic': 'Linguistic', 'Logical_Mathematical': 'Logical Mathematical',
-                                     'Spatial': 'Spatial', 'Musical': 'Musical',
-                                     'Bodily_Kinesthetic': 'Bodily Kinesthetic', 'Interpersonal': 'Interpersonal',
-                                     'Intrapersonal': 'Intrapersonal', 'Naturalistic': 'Naturalistic',
-                                     'Existential': 'Existential'}),
+        figure={},
     ),
 
     # Bar chart for Cluster Performance
     dcc.Graph(
         id='bar-cluster-performance',
-        figure={
-            'data': [
-                go.Bar(x=list(range(min_clusters, max_clusters + 1)),
-                       y=cluster_performance,
-                       marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
-                       type='bar',
-                       name='Average Exam Scores')
-            ],
-            'layout': dict(title='Average Exam Scores for Different Numbers of Clusters',
-                           xaxis=dict(title='Number of Clusters'), yaxis=dict(title='Average Exam Scores'))
-        }
+        figure={},
     ),
 
     # Table for displaying student data with pagination
@@ -193,6 +69,7 @@ app.layout = html.Div([
             {'name': col, 'id': col} for col in data.columns
         ],
         page_size=10,  # Set the number of rows per page
+        style_table={'height': '300px', 'overflowY': 'auto'},
         data=data.to_dict('records'),  # Load data directly from the DataFrame
     ),
 
@@ -202,48 +79,44 @@ app.layout = html.Div([
     # HTML component for displaying cluster descriptions
     html.Div([
         html.H3("Cluster Descriptions"),
-        *[html.P(description) for description in cluster_descriptions]
+        html.P("Upload a CSV file to see cluster descriptions."),
     ]),
 
     # Visualizations for Cluster Homogeneity/Heterogeneity
     dcc.Graph(
         id='intra-cluster-similarity',
-        figure={
-            'data': [
-                go.Bar(x=cluster_characteristics.index,
-                       y=data.groupby('Final_Cluster').std()['Exam_Scores'],
-                       marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
-                       name='Standard Deviation of Exam Scores')
-            ],
-            'layout': dict(title='Intra-Cluster Homogeneity/Heterogeneity',
-                           xaxis=dict(title='Final Cluster'), yaxis=dict(title='Standard Deviation of Exam Scores'))
-        }
+        figure={},
     ),
 
     dcc.Graph(
         id='inter-cluster-similarity',
-        figure={
-            'data': [
-                go.Bar(x=data.groupby('Final_Cluster').mean().index,
-                       y=cluster_performance,
-                       marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
-                       name='Average Exam Scores')
-            ],
-            'layout': dict(title='Inter-Cluster Homogeneity/Heterogeneity',
-                           xaxis=dict(title='Final Cluster'), yaxis=dict(title='Average Exam Scores'))
-        }
+        figure={},
     ),
+
+    # Accuracy Analysis
+    html.Div([
+        html.H3("Accuracy Analysis"),
+        html.P("Accuracy analysis results will be displayed here."),
+    ], id='accuracy-analysis'),
 ])
 
 # Callback to process uploaded data
 @app.callback(
-    Output('uploaded-data', 'children'),
+    [Output('uploaded-data', 'children'),
+     Output('scatter-final-grouping-3d', 'figure'),
+     Output('scatter-multiple-intelligences', 'figure'),
+     Output('bar-cluster-performance', 'figure'),
+     Output('table', 'data'),
+     Output('download-link', 'href'),
+     Output('intra-cluster-similarity', 'figure'),
+     Output('inter-cluster-similarity', 'figure'),
+     Output('accuracy-analysis', 'children')],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')]
 )
 def update_uploaded_data(contents, filename):
     if contents is None:
-        return html.Div()
+        return html.Div(), {}, {}, {}, [], '', {}, {}, []
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
@@ -252,9 +125,131 @@ def update_uploaded_data(contents, filename):
     uploaded_data = pd.read_csv(BytesIO(decoded))
 
     # Process the uploaded data
-    # ... (perform clustering and other analyses based on the uploaded_data)
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(uploaded_data[['Study_Hours', 'Assignments_Completed', 'Exam_Scores',
+                                                      'Learning_Style', 'Linguistic', 'Logical_Mathematical',
+                                                      'Spatial', 'Musical', 'Bodily_Kinesthetic',
+                                                      'Interpersonal', 'Intrapersonal', 'Naturalistic', 'Existential']])
 
-    # Display information about the uploaded data
+    # Experiment with different numbers of clusters
+    min_clusters = 2
+    max_clusters = 6
+
+    cluster_performance = []
+
+    for num_clusters in range(min_clusters, max_clusters + 1):
+        kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42)
+        uploaded_data['Cluster'] = kmeans.fit_predict(scaled_data)
+
+        # Analyze the average performance of each cluster
+        cluster_avg_performance = uploaded_data.groupby('Cluster')['Exam_Scores'].mean().mean()
+        cluster_performance.append(cluster_avg_performance)
+
+    # Choose the optimal number of clusters based on the analysis
+    optimal_num_clusters = cluster_performance.index(max(cluster_performance)) + min_clusters
+
+    # Use the optimal number of clusters to create the final grouping
+    kmeans_final = KMeans(n_clusters=optimal_num_clusters, random_state=42)
+    uploaded_data['Final_Cluster'] = kmeans_final.fit_predict(scaled_data)
+
+    # Save the final results to a CSV file
+    result_csv_path = 'final_grouping_results.csv'
+    uploaded_data.to_csv(result_csv_path, index=False)
+
+    # Read results from the CSV file
+    data = pd.read_csv(result_csv_path)
+
+    # Analyze the characteristics of each final cluster
+    cluster_characteristics = uploaded_data.groupby('Final_Cluster').mean()
+
+    # Generate descriptive text for each cluster
+    cluster_descriptions = []
+    for cluster_id, characteristics in cluster_characteristics.iterrows():
+        description = f"Cluster {cluster_id} Characteristics:\n"
+        description += f"  - Average Study Hours: {characteristics['Study_Hours']:.2f}\n"
+        description += f"  - Average Assignments Completed: {characteristics['Assignments_Completed']:.2f}\n"
+        description += f"  - Average Exam Scores: {characteristics['Exam_Scores']:.2f}\n"
+        description += f"  - Dominant Learning Style: {characteristics['Learning_Style']:.0f}\n"
+
+        # Determine the dominant intelligence
+        dominant_intelligence = characteristics[['Linguistic', 'Logical_Mathematical', 'Spatial', 'Musical',
+                                                 'Bodily_Kinesthetic', 'Interpersonal', 'Intrapersonal', 'Naturalistic',
+                                                 'Existential']].idxmax()
+        description += f"  - Dominant Intelligence: {dominant_intelligence}\n"
+
+        cluster_descriptions.append(description)
+
+    # Update the scatter plot
+    scatter_final_grouping_3d = px.scatter_3d(uploaded_data, x='Study_Hours', y='Exam_Scores', z='Learning_Style',
+                                              color='Final_Cluster', size_max=20,
+                                              title=f'3D Scatter Plot with Learning Style and Final Grouping',
+                                              labels={'Study_Hours': 'Study Hours', 'Exam_Scores': 'Exam Scores',
+                                                      'Learning_Style': 'Learning Style'})
+
+    # Update the scatter plot for multiple intelligences
+    scatter_multiple_intelligences = px.scatter_3d(uploaded_data, x='Linguistic', y='Logical_Mathematical',
+                                                   z='Spatial', color='Final_Cluster', size_max=20,
+                                                   title='3D Scatter Plot with Multiple Intelligences',
+                                                   labels={'Linguistic': 'Linguistic', 'Logical_Mathematical': 'Logical Mathematical',
+                                                           'Spatial': 'Spatial', 'Musical': 'Musical',
+                                                           'Bodily_Kinesthetic': 'Bodily Kinesthetic', 'Interpersonal': 'Interpersonal',
+                                                           'Intrapersonal': 'Intrapersonal', 'Naturalistic': 'Naturalistic',
+                                                           'Existential': 'Existential'})
+
+    # Update the bar chart for cluster performance
+    bar_cluster_performance = {
+        'data': [
+            go.Bar(x=list(range(min_clusters, max_clusters + 1)),
+                   y=cluster_performance,
+                   marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
+                   type='bar',
+                   name='Average Exam Scores')
+        ],
+        'layout': dict(title='Average Exam Scores for Different Numbers of Clusters',
+                       xaxis=dict(title='Number of Clusters'), yaxis=dict(title='Average Exam Scores'))
+    }
+
+    # Update the table data
+    table_data = uploaded_data.to_dict('records')
+
+    # Update the download link for CSV
+    csv_buffer = BytesIO()
+    uploaded_data.to_csv(csv_buffer, index=False)
+    csv_buffer.seek(0)
+    csv_data = base64.b64encode(csv_buffer.read()).decode('utf-8')
+    download_link = f'data:text/csv;base64,{csv_data}'
+
+    # Update the intra-cluster similarity bar chart
+    intra_cluster_similarity = {
+        'data': [
+            go.Bar(x=cluster_characteristics.index,
+                   y=uploaded_data.groupby('Final_Cluster').std()['Exam_Scores'],
+                   marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
+                   name='Standard Deviation of Exam Scores')
+        ],
+        'layout': dict(title='Intra-Cluster Homogeneity/Heterogeneity',
+                       xaxis=dict(title='Final Cluster'), yaxis=dict(title='Standard Deviation of Exam Scores'))
+    }
+
+    # Update the inter-cluster similarity bar chart
+    inter_cluster_similarity = {
+        'data': [
+            go.Bar(x=uploaded_data.groupby('Final_Cluster').mean().index,
+                   y=cluster_performance,
+                   marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
+                   name='Average Exam Scores')
+        ],
+        'layout': dict(title='Inter-Cluster Homogeneity/Heterogeneity',
+                       xaxis=dict(title='Final Cluster'), yaxis=dict(title='Average Exam Scores'))
+    }
+
+    # Update the accuracy analysis
+    accuracy_analysis = html.Div([
+        html.H4("Accuracy Analysis"),
+        html.P("Accuracy analysis results will be displayed here."),
+        # Add your accuracy analysis components here
+    ])
+
     return html.Div([
         html.H4(f'Uploaded Data: {filename}'),
         dash_table.DataTable(
@@ -264,21 +259,7 @@ def update_uploaded_data(contents, filename):
             data=uploaded_data.to_dict('records'),
             page_size=10
         )
-    ])
-
-# Callback for CSV download
-@app.callback(
-    Output('download-link', 'href'),
-    [Input('scatter-final-grouping-3d', 'relayoutData')]  # Use an arbitrary input, so the callback is triggered on page load
-)
-def update_download_link(relayout_data):
-    # Create a download link for the CSV file
-    csv_buffer = BytesIO()
-    data.to_csv(csv_buffer, index=False)
-    csv_buffer.seek(0)
-    csv_data = base64.b64encode(csv_buffer.read()).decode('utf-8')
-    href_value = f'data:text/csv;base64,{csv_data}'
-    return href_value
+    ]), scatter_final_grouping_3d, scatter_multiple_intelligences, bar_cluster_performance, table_data, download_link, intra_cluster_similarity, inter_cluster_similarity, accuracy_analysis
 
 # Run the app
 if __name__ == '__main__':
