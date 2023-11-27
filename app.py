@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
+import plotly.graph_objects as go
 from io import BytesIO
 import base64
 
@@ -168,7 +169,30 @@ app.layout = html.Div([
     html.Div([
         html.H3("Cluster Descriptions"),
         *[html.P(description) for description in cluster_descriptions]
-    ])
+    ]),
+    
+    # Visualizations for Cluster Homogeneity/Heterogeneity
+    dcc.Graph(
+        id='intra-cluster-similarity',
+        figure={
+            'data': [
+                go.Bar(x=cluster_characteristics.index, y=data.groupby('Final_Cluster').std()['Exam_Scores'], name='Standard Deviation of Exam Scores')
+            ],
+            'layout': dict(title='Intra-Cluster Homogeneity/Heterogeneity',
+                           xaxis=dict(title='Final Cluster'), yaxis=dict(title='Standard Deviation of Exam Scores'))
+        }
+    ),
+    
+    dcc.Graph(
+        id='inter-cluster-similarity',
+        figure={
+            'data': [
+                go.Bar(x=data.groupby('Final_Cluster').mean().index, y=cluster_performance, name='Average Exam Scores')
+            ],
+            'layout': dict(title='Inter-Cluster Homogeneity/Heterogeneity',
+                           xaxis=dict(title='Final Cluster'), yaxis=dict(title='Average Exam Scores'))
+        }
+    ),
 ])
 
 # Define callback for CSV download
