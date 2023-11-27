@@ -115,7 +115,7 @@ app = dash.Dash(__name__)
 
 # Define layout of the app
 app.layout = html.Div([
-    html.H1("Smart Student Grouping"),
+    html.H1("Intelligent Student Grouping"),
     
     # 3D Scatter plot for Final Grouping
     dcc.Graph(
