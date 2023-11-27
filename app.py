@@ -4,12 +4,12 @@ import dash_html_components as html
 import dash_table
 from dash.dependencies import Input, Output
 import pandas as pd
+import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 from io import BytesIO
 import base64
-import numpy as np
 
 # Function to generate synthetic data
 def generate_synthetic_data(num_students):
@@ -94,12 +94,28 @@ app = dash.Dash(__name__)
 
 # Define layout of the app
 app.layout = html.Div([
-    # Scatter plot for Final Grouping
+    html.H1("Smart Student Grouping"),
+    # 3D Scatter plot for Final Grouping
     dcc.Graph(
-        id='scatter-final-grouping',
-        figure=px.scatter(data, x='Study_Hours', y='Exam_Scores', color='Final_Cluster',
-                          title=f'Final Grouping of Students (Optimal Clusters: {optimal_num_clusters})',
-                          labels={'Study_Hours': 'Study Hours', 'Exam_Scores': 'Exam Scores'}),
+        id='scatter-final-grouping-3d',
+        figure=px.scatter_3d(data, x='Study_Hours', y='Exam_Scores', z='Learning_Style',
+                             color='Final_Cluster', size_max=10,
+                             title=f'3D Scatter Plot with Learning Style and Final Grouping',
+                             labels={'Study_Hours': 'Study Hours', 'Exam_Scores': 'Exam Scores',
+                                     'Learning_Style': 'Learning Style'}),
+    ),
+
+    # 3D Scatter plot with Multiple Intelligences
+    dcc.Graph(
+        id='scatter-multiple-intelligences',
+        figure=px.scatter_3d(data, x='Linguistic', y='Logical_Mathematical', z='Spatial',
+                             color='Final_Cluster', size_max=10,
+                             title='3D Scatter Plot with Multiple Intelligences',
+                             labels={'Linguistic': 'Linguistic', 'Logical_Mathematical': 'Logical Mathematical',
+                                     'Spatial': 'Spatial', 'Musical': 'Musical',
+                                     'Bodily_Kinesthetic': 'Bodily Kinesthetic', 'Interpersonal': 'Interpersonal',
+                                     'Intrapersonal': 'Intrapersonal', 'Naturalistic': 'Naturalistic',
+                                     'Existential': 'Existential'}),
     ),
     
     # Bar chart for Cluster Performance
@@ -125,16 +141,41 @@ app.layout = html.Div([
     ),
     
     # Download link for CSV
-    html.A('Download CSV', href='/download-csv'),
+    html.A('Download CSV', id='download-link', href='', download='final_grouping_results.csv', target='_blank'),
 ])
 
 # Define callback for CSV download
-@app.server.route('/download-csv')
-def download_csv():
+@app.callback(
+    Output('download-link', 'href'),
+    [Input('scatter-final-grouping-3d', 'relayoutData')]  # Use an arbitrary input, so the callback is triggered on page load
+)
+def update_download_link(relayout_data):
+    # Create a download link for the CSV file
     csv_buffer = BytesIO()
     data.to_csv(csv_buffer, index=False)
     csv_buffer.seek(0)
-    return base64.b64encode(csv_buffer.read()).decode('utf-8')
+    csv_data = base64.b64encode(csv_buffer.read()).decode('utf-8')
+    href_value = f'data:text/csv;base64,{csv_data}'
+    return href_value
+
+# Analyze the characteristics of each final cluster
+cluster_characteristics = data.groupby('Final_Cluster').mean()
+
+# Generate descriptive text for each cluster
+cluster_descriptions = []
+for cluster_id, characteristics in cluster_characteristics.iterrows():
+    description = f"Cluster {cluster_id} Characteristics:\n"
+    description += f"  - Average Study Hours: {characteristics['Study_Hours']:.2f}\n"
+    description += f"  - Average Assignments Completed: {characteristics['Assignments_Completed']:.2f}\n"
+    description += f"  - Average Exam Scores: {characteristics['Exam_Scores']:.2f}\n"
+    description += f"  - Dominant Learning Style: {characteristics['Learning_Style']:.0f}\n"
+    # Add more lines for other features if needed
+    cluster_descriptions.append(description)
+
+# Print or use the descriptions as needed
+for description in cluster_descriptions:
+    print(description)
+
 
 # Run the app
 if __name__ == '__main__':
