@@ -89,12 +89,33 @@ data['Final_Cluster'] = kmeans_final.fit_predict(scaled_data)
 result_csv_path = 'final_grouping_results.csv'
 data.to_csv(result_csv_path, index=False)
 
+# Analyze the characteristics of each final cluster
+cluster_characteristics = data.groupby('Final_Cluster').mean()
+
+# Generate descriptive text for each cluster
+cluster_descriptions = []
+for cluster_id, characteristics in cluster_characteristics.iterrows():
+    description = f"Cluster {cluster_id} Characteristics:\n"
+    description += f"  - Average Study Hours: {characteristics['Study_Hours']:.2f}\n"
+    description += f"  - Average Assignments Completed: {characteristics['Assignments_Completed']:.2f}\n"
+    description += f"  - Average Exam Scores: {characteristics['Exam_Scores']:.2f}\n"
+    description += f"  - Dominant Learning Style: {characteristics['Learning_Style']:.0f}\n"
+    
+    # Determine the dominant intelligence
+    dominant_intelligence = characteristics[['Linguistic', 'Logical_Mathematical', 'Spatial', 'Musical',
+                                             'Bodily_Kinesthetic', 'Interpersonal', 'Intrapersonal', 'Naturalistic',
+                                             'Existential']].idxmax()
+    description += f"  - Dominant Intelligence: {dominant_intelligence}\n"
+    
+    cluster_descriptions.append(description)
+
 # Initialize Dash app
 app = dash.Dash(__name__)
 
 # Define layout of the app
 app.layout = html.Div([
-    html.H1("Smart Student Grouping"),
+    html.H1("Educational Data Mining Dashboard"),
+    
     # 3D Scatter plot for Final Grouping
     dcc.Graph(
         id='scatter-final-grouping-3d',
@@ -139,9 +160,15 @@ app.layout = html.Div([
         page_size=10,  # Set the number of rows per page
         data=data.to_dict('records'),  # Load data directly from the DataFrame
     ),
-    
+
     # Download link for CSV
     html.A('Download CSV', id='download-link', href='', download='final_grouping_results.csv', target='_blank'),
+    
+    # HTML component for displaying cluster descriptions
+    html.Div([
+        html.H3("Cluster Descriptions"),
+        *[html.P(description) for description in cluster_descriptions]
+    ])
 ])
 
 # Define callback for CSV download
@@ -157,25 +184,6 @@ def update_download_link(relayout_data):
     csv_data = base64.b64encode(csv_buffer.read()).decode('utf-8')
     href_value = f'data:text/csv;base64,{csv_data}'
     return href_value
-
-# Analyze the characteristics of each final cluster
-cluster_characteristics = data.groupby('Final_Cluster').mean()
-
-# Generate descriptive text for each cluster
-cluster_descriptions = []
-for cluster_id, characteristics in cluster_characteristics.iterrows():
-    description = f"Cluster {cluster_id} Characteristics:\n"
-    description += f"  - Average Study Hours: {characteristics['Study_Hours']:.2f}\n"
-    description += f"  - Average Assignments Completed: {characteristics['Assignments_Completed']:.2f}\n"
-    description += f"  - Average Exam Scores: {characteristics['Exam_Scores']:.2f}\n"
-    description += f"  - Dominant Learning Style: {characteristics['Learning_Style']:.0f}\n"
-    # Add more lines for other features if needed
-    cluster_descriptions.append(description)
-
-# Print or use the descriptions as needed
-for description in cluster_descriptions:
-    print(description)
-
 
 # Run the app
 if __name__ == '__main__':
