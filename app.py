@@ -115,7 +115,7 @@ app = dash.Dash(__name__)
 
 # Define layout of the app
 app.layout = html.Div([
-    html.H1("Educational Data Mining Dashboard"),
+    html.H1("Smart Student Grouping"),
     
     # 3D Scatter plot for Final Grouping
     dcc.Graph(
@@ -145,7 +145,11 @@ app.layout = html.Div([
         id='bar-cluster-performance',
         figure={
             'data': [
-                {'x': list(range(min_clusters, max_clusters + 1)), 'y': cluster_performance, 'type': 'bar', 'name': 'Average Exam Scores'}
+                go.Bar(x=list(range(min_clusters, max_clusters + 1)), 
+                       y=cluster_performance, 
+                       marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
+                       type='bar', 
+                       name='Average Exam Scores')
             ],
             'layout': dict(title='Average Exam Scores for Different Numbers of Clusters', 
                            xaxis=dict(title='Number of Clusters'), yaxis=dict(title='Average Exam Scores'))
@@ -176,25 +180,31 @@ app.layout = html.Div([
         id='intra-cluster-similarity',
         figure={
             'data': [
-                go.Bar(x=cluster_characteristics.index, y=data.groupby('Final_Cluster').std()['Exam_Scores'], name='Standard Deviation of Exam Scores')
+                go.Bar(x=cluster_characteristics.index, 
+                       y=data.groupby('Final_Cluster').std()['Exam_Scores'], 
+                       marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
+                       name='Standard Deviation of Exam Scores')
             ],
             'layout': dict(title='Intra-Cluster Homogeneity/Heterogeneity',
                            xaxis=dict(title='Final Cluster'), yaxis=dict(title='Standard Deviation of Exam Scores'))
         }
     ),
     
+    
     dcc.Graph(
         id='inter-cluster-similarity',
         figure={
             'data': [
-                go.Bar(x=data.groupby('Final_Cluster').mean().index, y=cluster_performance, name='Average Exam Scores')
+                go.Bar(x=data.groupby('Final_Cluster').mean().index, 
+                       y=cluster_performance, 
+                       marker=dict(color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']),  # Specify colors
+                       name='Average Exam Scores')
             ],
             'layout': dict(title='Inter-Cluster Homogeneity/Heterogeneity',
                            xaxis=dict(title='Final Cluster'), yaxis=dict(title='Average Exam Scores'))
         }
     ),
 ])
-
 # Define callback for CSV download
 @app.callback(
     Output('download-link', 'href'),
