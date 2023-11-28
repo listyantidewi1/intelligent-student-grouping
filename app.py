@@ -258,6 +258,7 @@ def update_uploaded_data(contents, filename):
             columns=[
                 {'name': col, 'id': col} for col in uploaded_data.columns
             ],
+            style_table={'height': '400px', 'overflowY': 'auto', 'overflowX':'auto'},
             data=uploaded_data.to_dict('records'),
             page_size=10
         )
