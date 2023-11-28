@@ -13,6 +13,12 @@ import base64
 from dash.exceptions import PreventUpdate
 from dash.dash_table.Format import Group
 
+'''
+pip install -U scikit-learn
+pip install -U pandas
+pip install -U dash
+'''
+
 # Initialize Dash app
 app = dash.Dash(__name__)
 
