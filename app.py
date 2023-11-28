@@ -1,7 +1,7 @@
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
-import dash_table
+from dash import dcc
+from dash import html
+from dash import dash_table
 from dash.dependencies import Input, Output, State
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -10,6 +10,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from io import BytesIO
 import base64
+from dash.exceptions import PreventUpdate
+from dash.dash_table.Format import Group
 
 # Initialize Dash app
 app = dash.Dash(__name__)
@@ -68,8 +70,8 @@ app.layout = html.Div([
         columns=[
             {'name': col, 'id': col} for col in data.columns
         ],
-        page_size=10,  # Set the number of rows per page
-        style_table={'height': '300px', 'overflowY': 'auto'},
+        # page_size=10,  # Set the number of rows per page
+        style_table={'height': '1px', 'overflowY': 'auto'},
         data=data.to_dict('records'),  # Load data directly from the DataFrame
     ),
 
@@ -90,11 +92,11 @@ app.layout = html.Div([
         figure={},
     ),
 
-    # Accuracy Analysis
-    html.Div([
-        html.H3("Accuracy Analysis"),
-        html.P("Accuracy analysis results will be displayed here."),
-    ], id='accuracy-analysis'),
+    # # Accuracy Analysis
+    # html.Div([
+    #     html.H3("Accuracy Analysis"),
+    #     html.P("Accuracy analysis results will be displayed here."),
+    # ], id='accuracy-analysis'),
 ])
 
 # Callback to process uploaded data
@@ -106,14 +108,17 @@ app.layout = html.Div([
      Output('table', 'data'),
      Output('download-link', 'href'),
      Output('intra-cluster-similarity', 'figure'),
-     Output('inter-cluster-similarity', 'figure'),
-     Output('accuracy-analysis', 'children')],
+     Output('inter-cluster-similarity', 'figure')
+     ],
     [Input('upload-data', 'contents')],
     [State('upload-data', 'filename')]
 )
+
 def update_uploaded_data(contents, filename):
     if contents is None:
-        return html.Div(), {}, {}, {}, [], '', {}, {}, []
+        raise PreventUpdate
+
+    print("Callback triggered!")
 
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
@@ -240,12 +245,12 @@ def update_uploaded_data(contents, filename):
                        xaxis=dict(title='Final Cluster'), yaxis=dict(title='Average Exam Scores'))
     }
 
-    # Update the accuracy analysis
-    accuracy_analysis = html.Div([
-        html.H4("Accuracy Analysis"),
-        html.P("Accuracy analysis results will be displayed here."),
-        # Add your accuracy analysis components here
-    ])
+    # # Update the accuracy analysis
+    # accuracy_analysis = html.Div([
+    #     html.H4("Accuracy Analysis"),
+    #     html.P("Accuracy analysis results will be displayed here."),
+    #     # Add your accuracy analysis components here
+    # ])
 
     return html.Div([
         html.H4(f'Uploaded Data: {filename}'),
@@ -256,7 +261,7 @@ def update_uploaded_data(contents, filename):
             data=uploaded_data.to_dict('records'),
             page_size=10
         )
-    ]), scatter_final_grouping_3d, scatter_multiple_intelligences, bar_cluster_performance, table_data, download_link, intra_cluster_similarity, inter_cluster_similarity, accuracy_analysis
+    ]), scatter_final_grouping_3d, scatter_multiple_intelligences, bar_cluster_performance, table_data, download_link, intra_cluster_similarity, inter_cluster_similarity
 
 # Run the app
 if __name__ == '__main__':
